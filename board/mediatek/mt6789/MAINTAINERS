@@ -1,0 +1,6 @@
+MT6789
+M:	Alicja Michalska <ellyqw@mainlining.org>
+S:	Maintained
+F:	board/mediatek/mt6789
+F:	include/configs/mt6789.h
+F:	configs/mt6789_vicky_defconfig

@@ -25,9 +25,12 @@ config UFS_MEDIATEK
 	  accessing the hardware which includes PHY configuration and vendor
 	  specific registers.
 
-	  Select this if you have UFS controller on MediaTek chipset.
-
-	  If unsure, say N.
+config UFS_MEDIATEK_EL3
+	bool "MediaTek UFS in EL3"
+	depends on UFS_MEDIATEK
+	help
+	 This option should only be selected if U-Boot is used as BL2 bootloader.
+	 Such example would be replacing LK in smartphones or Depthcharge in CrOS.
 
 config UFS_PCI
 	bool "PCI bus based UFS Controller support"

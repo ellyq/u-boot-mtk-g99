@@ -89,6 +89,7 @@ static int ufs_mtk_unipro_set_lpm(struct ufs_hba *hba, bool lpm)
 	return ret;
 }
 
+#if !defined(CONFIG_UFS_MEDIATEK_EL3)
 void mtk_ufs_bootloader_smc_reset(void)
 {
 	struct arm_smccc_res smccc_res;
@@ -104,6 +105,7 @@ void mtk_ufs_bootloader_smc_reset(void)
 	arm_smccc_smc(MTK_SIP_BL_UFS_CONTROL, (1 << 1),
 				  1, 0, 0, 0, 0, 0, &smccc_res);
 }
+#endif
 
 static int ufs_mtk_pre_link(struct ufs_hba *hba)
 {
@@ -115,7 +117,10 @@ static int ufs_mtk_pre_link(struct ufs_hba *hba)
 	 * to run in non-secure world, we need to reset the UFS
 	 * controller via the SMC to acknowledge the switch.
 	 */
+
+#if !defined(CONFIG_UFS_MEDIATEK_EL3)
 	mtk_ufs_bootloader_smc_reset();
+#endif
 
 	ret = ufs_mtk_unipro_set_lpm(hba, false);
 	if (ret)
@@ -210,6 +215,8 @@ static int ufs_mtk_link_startup_notify(struct ufs_hba *hba,
 	return ret;
 }
 
+// MT6789 doesn't have mphy
+#if !defined(CONFIG_TARGET_MT6789)
 static int ufs_mtk_bind_mphy(struct ufs_hba *hba)
 {
 	struct ufs_mtk_host *host = dev_get_priv(hba->dev);
@@ -230,6 +237,7 @@ static int ufs_mtk_bind_mphy(struct ufs_hba *hba)
 
 	return err;
 }
+#endif
 
 static void ufs_mtk_init_reset_control(struct ufs_hba *hba,
 				       struct reset_ctl **rc,
@@ -346,15 +354,16 @@ static int ufs_mtk_init(struct ufs_hba *hba)
 
 	priv->hba = hba;
 
-	err = ufs_mtk_bind_mphy(hba);
-	if (err)
-		return -ENODEV;
-
 	ufs_mtk_advertise_quirks(hba);
-
 	ufs_mtk_init_reset(hba);
 
 	// TODO: Clocks :)
+
+// MT6789 doesn't have mphy
+#if !defined(CONFIG_TARGET_MT6789)
+	err = ufs_mtk_bind_mphy(hba);
+	if (err)
+		return -ENODEV;
 
 	err = generic_phy_power_on(priv->mphy);
 	if (err) {
@@ -362,6 +371,7 @@ static int ufs_mtk_init(struct ufs_hba *hba)
 			__func__, err);
 		return err;
 	}
+#endif
 
 	ufs_mtk_setup_ref_clk(hba, true);
 	ufs_mtk_get_hw_ip_version(hba);
@@ -371,6 +381,21 @@ static int ufs_mtk_init(struct ufs_hba *hba)
 
 static int ufs_mtk_device_reset(struct ufs_hba *hba)
 {
+// Reset logic works differently if we're acting as BL2
+#if defined(CONFIG_UFS_MEDIATEK_EL3)
+	struct ufs_mtk_host *priv = dev_get_priv(hba->dev);
+
+	reset_assert(priv->hci_reset);
+	reset_assert(priv->crypto_reset);
+	reset_assert(priv->unipro_reset);
+
+	udelay(100);
+
+	reset_deassert(priv->hci_reset);
+	reset_deassert(priv->crypto_reset);
+	reset_deassert(priv->unipro_reset);
+	mdelay(10);
+#else
 	struct arm_smccc_res res;
 
 	ufs_mtk_device_reset_ctrl(0, res);
@@ -390,7 +415,7 @@ static int ufs_mtk_device_reset(struct ufs_hba *hba)
 	udelay(15000);
 
 	dev_info(hba->dev, "device reset done\n");
-
+#endif
 	return 0;
 }
 
@@ -422,6 +447,8 @@ static int ufs_mtk_bind(struct udevice *dev)
 }
 
 static const struct udevice_id ufs_mtk_ids[] = {
+	{ .compatible = "mediatek,mt6789-ufshci" },
+	{ .compatible = "mediatek,mt6878-ufshci" },
 	{ .compatible = "mediatek,mt8183-ufshci" },
 	{},
 };

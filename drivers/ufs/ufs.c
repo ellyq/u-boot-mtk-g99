@@ -575,7 +575,11 @@ static int ufshcd_hba_enable(struct ufs_hba *hba)
 	mdelay(1);
 
 	/* wait for the host controller to complete initialization */
+#if defined(CONFIG_UFS_MEDIATEK_EL3)
+	retry = 40;
+#else
 	retry = 10;
+#endif
 	while (ufshcd_is_hba_active(hba)) {
 		if (retry) {
 			retry--;

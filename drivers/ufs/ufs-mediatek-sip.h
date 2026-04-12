@@ -61,6 +61,11 @@ static inline void _ufs_mtk_smc(struct ufs_mtk_smc_arg s)
 		s.v1, s.v2, s.v3, s.v4, s.v5, s.v6, s.res);
 }
 
+#if defined(CONFIG_UFS_MEDIATEK_EL3)
+	#define ufs_mtk_ref_clk_notify(on, stage, res) \
+		do {} while (0) // Purely for ATF.
+#else
+
 #define ufs_mtk_smc(...) \
 	_ufs_mtk_smc((struct ufs_mtk_smc_arg) {__VA_ARGS__})
 
@@ -91,5 +96,6 @@ static inline void _ufs_mtk_smc(struct ufs_mtk_smc_arg s)
 
 #define ufs_mtk_mtcmos_ctrl(op, res) \
 	ufs_mtk_smc(UFS_MTK_SIP_MTCMOS_CTRL, &(res), op)
+#endif
 
 #endif /* !_UFS_MEDIATEK_SIP_H */

@@ -109,12 +109,13 @@ static int mtk_wdt_start(struct udevice *dev, u64 timeout_ms, ulong flags)
 	struct mtk_wdt_priv *priv = dev_get_priv(dev);
 
 	mtk_wdt_set_timeout(dev, timeout_ms);
-
 	mtk_wdt_reset(dev);
 
 	/* Enable watchdog reset signal */
+#if !defined(CONFIG_UFS_MEDIATEK_EL3)
 	setbits_le32(priv->base + MTK_WDT_MODE,
 		     WDT_MODE_EN | WDT_MODE_KEY | WDT_MODE_EXTEN);
+#endif
 
 	return 0;
 }
